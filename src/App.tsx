@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import { Zap, Github, Code, FileText, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  BoltIcon, 
+  CodeBracketIcon, 
+  DocumentTextIcon, 
+  CheckCircleIcon 
+} from '@heroicons/react/24/outline';
+import { Bars3Icon } from '@heroicons/react/24/solid';
 import GitHubConnect from './components/GitHubConnect';
 import FileExplorer from './components/FileExplorer';
 import TestCaseSummaries from './components/TestCaseSummaries';
 import TestCaseCode from './components/TestCaseCode';
+import SuccessPage from './components/SuccessPage';
+import StepIndicator from './components/ui/StepIndicator';
+import DarkModeToggle from './components/ui/DarkModeToggle';
+import { ToastProvider } from './components/ui/Toast';
 import { RepositoryInfo, GitHubFile, TestCaseSummary, TestCaseCode as TestCaseCodeType, GitHubConfig } from './types';
 import AIService from './services/aiService';
 
@@ -15,8 +26,15 @@ const App: React.FC = () => {
   const [testCaseSummaries, setTestCaseSummaries] = useState<TestCaseSummary[]>([]);
   const [testCaseCode, setTestCaseCode] = useState<TestCaseCodeType | null>(null);
   const [isGeneratingSummaries, setIsGeneratingSummaries] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
+  const steps = [
+    { key: 'connect', label: 'Connect', icon: Bars3Icon },
+    { key: 'select', label: 'Select Files', icon: DocumentTextIcon },
+    { key: 'generate', label: 'Generate Tests', icon: BoltIcon },
+    { key: 'code', label: 'View Code', icon: CodeBracketIcon },
+    { key: 'complete', label: 'Complete', icon: CheckCircleIcon },
+  ];
 
   const handleRepositoryConnected = (repoInfo: RepositoryInfo, token: string) => {
     setRepositoryInfo(repoInfo);
@@ -80,99 +98,126 @@ const App: React.FC = () => {
     };
   };
 
-  const renderStepIndicator = () => {
-    const steps = [
-      { key: 'connect', label: 'Connect', icon: Github },
-      { key: 'select', label: 'Select Files', icon: FileText },
-      { key: 'generate', label: 'Generate Tests', icon: Zap },
-      { key: 'code', label: 'View Code', icon: Code },
-      { key: 'complete', label: 'Complete', icon: CheckCircle },
-    ];
-
-    return (
-      <div className="flex items-center justify-center mb-8">
-        <div className="flex items-center space-x-4">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.key;
-            const isCompleted = steps.findIndex(s => s.key === currentStep) > index;
-            
-            return (
-              <div key={step.key} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  isActive 
-                    ? 'border-primary-600 bg-primary-600 text-white' 
-                    : isCompleted 
-                    ? 'border-green-500 bg-green-500 text-white'
-                    : 'border-gray-300 bg-white text-gray-400'
-                }`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-2 ${
-                    isCompleted ? 'bg-green-500' : 'bg-gray-300'
-                  }`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Test Case Generator
-          </h1>
-          <p className="text-lg text-gray-600">
-            AI-powered test case generation with GitHub integration
-          </p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <ToastProvider />
+      
+      {/* Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40"
+      >
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center space-x-3"
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl flex items-center justify-center">
+                <BoltIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Test Case Generator
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  AI-powered testing automation
+                </p>
+              </div>
+            </motion.div>
+            
+            <DarkModeToggle />
+          </div>
         </div>
+      </motion.header>
 
+      <div className="container mx-auto px-4 py-8">
         {/* Step Indicator */}
-        {renderStepIndicator()}
+        <StepIndicator steps={steps} currentStep={currentStep} />
 
         {/* Main Content */}
-        <div className="max-w-6xl mx-auto">
-          {currentStep === 'connect' && (
-            <GitHubConnect onRepositoryConnected={handleRepositoryConnected} />
-          )}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-7xl mx-auto"
+        >
+          <AnimatePresence mode="wait">
+            {currentStep === 'connect' && (
+              <motion.div
+                key="connect"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <GitHubConnect onRepositoryConnected={handleRepositoryConnected} />
+              </motion.div>
+            )}
 
-          {currentStep === 'select' && repositoryInfo && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    Repository: {repositoryInfo.owner}/{repositoryInfo.name}
-                  </h2>
-                  <p className="text-gray-600">{repositoryInfo.description}</p>
-                </div>
-                <FileExplorer
-                  owner={repositoryInfo.owner}
-                  repo={repositoryInfo.name}
-                  token={githubToken}
-                  onFilesSelected={handleFilesSelected}
-                  onNextStep={handleFileSelectionNext}
-                />
-              </div>
-              <div>
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Selected Files</h3>
-                  {selectedFiles.length === 0 ? (
-                    <p className="text-gray-500">No files selected yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedFiles.map((file) => (
-                        <div key={file.path} className="flex items-center p-2 bg-gray-50 rounded">
-                          <FileText className="w-4 h-4 text-gray-500 mr-2" />
-                          <span className="text-sm text-gray-700">{file.name}</span>
+            {currentStep === 'select' && repositoryInfo && (
+              <motion.div
+                key="select"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+              >
+                <div className="lg:col-span-2">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mb-6"
+                  >
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center mb-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center mr-4">
+                          <Bars3Icon className="w-6 h-6 text-white" />
                         </div>
-                      ))}
+                        <div>
+                          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                            {repositoryInfo.owner}/{repositoryInfo.name}
+                          </h2>
+                          <p className="text-gray-600 dark:text-gray-400">{repositoryInfo.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                  
+                  <FileExplorer
+                    owner={repositoryInfo.owner}
+                    repo={repositoryInfo.name}
+                    token={githubToken}
+                    onFilesSelected={handleFilesSelected}
+                    onNextStep={handleFileSelectionNext}
+                  />
+                </div>
+                
+                <div className="lg:col-span-1">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sticky top-24"
+                  >
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Selected Files</h3>
+                    {selectedFiles.length === 0 ? (
+                      <div className="text-center py-8">
+                        <DocumentTextIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">No files selected yet.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedFiles.map((file, index) => (
+                          <motion.div
+                            key={file.path}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600"
                     </div>
                   )}
                 </div>
